@@ -3,10 +3,19 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.cell.PropertyValueFactory?>
+<?import sample.CheckBoxCellFactory?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.TextField?>
 <VBox fx:controller="sample.Controller" xmlns:fx="http://javafx.com/fxml" alignment="center">
-    <TableView fx:id="tableView">
+    <TableView fx:id="tableView" editable="true">
         <columns>
-            <TableColumn text="Rotate" prefWidth="100" >
+            <TableColumn fx:id="checkBoxTableColumn" text="Rotate" prefWidth="100" editable="true" >
+                <cellValueFactory>
+                    <PropertyValueFactory property="horizontal" />
+                </cellValueFactory>
+                <cellFactory>
+                    <sample.CheckBoxCellFactory />
+                </cellFactory>
             </TableColumn>
             <TableColumn text="File Name" prefWidth="1180">
                 <cellValueFactory>
@@ -16,5 +25,10 @@
         </columns>
     </TableView>
     <Button text="Select files" fx:id="selectButton" onAction="#select"/>
+    <HBox alignment="BASELINE_CENTER">
+        <TextField fx:id="destPath" />
+        <Button text="Select Path" onAction="#selectPath" />
+    </HBox>
     <Button text="CONVERT!" fx:id="convertButton" onAction="#convert" />
+    <Button text="CLEAR LIST" onAction="#clearList"/>
 </VBox>

@@ -3,10 +3,10 @@ package sample;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.print.*;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.stage.FileChooser;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
@@ -17,6 +17,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 
+
 import java.awt.geom.AffineTransform;
 import java.io.File;
 import java.io.IOException;
@@ -26,12 +27,24 @@ import java.util.List;
 
 public class Controller {
 
+    private File finalFile;
+
     @FXML
     private TableView tableView;
 
     @FXML
+    private TextField destPath;
+
+    @FXML
+    public void initialize() {
+        String dir = System.getProperty("user.dir") + "\\result.pdf";
+        finalFile = new File(dir);
+        destPath.setText(finalFile.getPath());
+    }
+
+    @FXML
     public void select(ActionEvent actionEvent) {
-        ObservableList<File> files = tableView.getItems();
+        ObservableList<Pdf> files = tableView.getItems();
 
         FileChooser fileChooser = new FileChooser();
 
@@ -39,8 +52,10 @@ public class Controller {
 
         List<File> selectedFiles = fileChooser.showOpenMultipleDialog(null);
 
-        for (File file : selectedFiles) {
-            files.add(file);
+        if(selectedFiles != null) {
+            for (File file : selectedFiles) {
+                files.add(new Pdf(file));
+            }
         }
 
     }
@@ -48,14 +63,13 @@ public class Controller {
     @FXML
     public void convert(ActionEvent actionEvent) {
         //PDF conversion init
-        ObservableList<File> files = tableView.getItems();
+        ObservableList<Pdf> files = tableView.getItems();
 
         List<PDDocument> pdfs = new ArrayList<PDDocument>();
 
         PDDocument outputFile = new PDDocument();
-        File finalFile = new File("C:\\Users\\Beata\\Desktop\\testdir\\test.pdf");
 
-        PDRectangle pdfTL, pdfTR, pdfBL,pdfBR;
+        PDRectangle pdfTL;
         PDRectangle outputRect;
         COSDictionary dict;
         PDPage outPdfPage;
@@ -64,23 +78,28 @@ public class Controller {
 
 
         try {
-            for (File file : files) {
-                pdfs.add(PDDocument.load(file));
+            for (Pdf file : files) {
+                try {
+                    pdfs.add(PDDocument.load(file));
+                } catch (Exception e) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("ERROR");
+                    alert.setHeaderText("An error occurred during conversion. Check selected files");
+                    alert.show();
+                    return;
+                }
             }
 
             while(!pdfs.isEmpty()) {
                 PDDocument[] pdf = new PDDocument[4];
                 int iter = 0;
+
                 //TODO Remake this with all file and ArrayList
                 while(iter<pdf.length && !pdfs.isEmpty()) {
                     pdf[iter] = pdfs.remove(0);
+
                     iter++;
                 }
-
-                /*PDDocument pdf1 = pdfs.remove(0);
-                PDDocument pdf2 = !pdfs.isEmpty() ? pdfs.remove(0) : null;
-                PDDocument pdf3 = !pdfs.isEmpty() ? pdfs.remove(0) : null;
-                PDDocument pdf4 = !pdfs.isEmpty() ? pdfs.remove(0) : null;*/
 
                 pdfTL = pdf[0].getPage(0).getCropBox();
 
@@ -102,25 +121,14 @@ public class Controller {
                 for (int i=0;i<pdf.length;i++) {
                     if(pdf[i] == null) break;
                     formPDF[i] = layerUtility.importPageAsForm(pdf[i],0);
+
+                    pdf[i].close();
                 }
 
-
-                /*PDFormXObject formPdf1 = layerUtility.importPageAsForm(pdf1,0);
-                PDFormXObject formPdf2 = layerUtility.importPageAsForm(pdf2,0);
-                PDFormXObject formPdf3 = layerUtility.importPageAsForm(pdf3,0);
-                PDFormXObject formPdf4 = layerUtility.importPageAsForm(pdf4,0);*/
-
                 AffineTransform afTopLeft = new AffineTransform();
-//                layerUtility.appendFormAsLayer(outPdfPage,formPdf1,afTopLeft,"topLeft" + page);
-
                 AffineTransform afTopRight = AffineTransform.getTranslateInstance(pdfTL.getWidth(),0.0);
-//                layerUtility.appendFormAsLayer(outPdfPage,formPdf2,afTopRight,"topRight" + page);
-
                 AffineTransform afBottomLeft = AffineTransform.getTranslateInstance(0.0,pdfTL.getHeight());
-//                layerUtility.appendFormAsLayer(outPdfPage,formPdf3,afBottomLeft,"bottomLeft" + page);
-
                 AffineTransform afBottomRight = AffineTransform.getTranslateInstance(pdfTL.getWidth(),pdfTL.getHeight());
-//                layerUtility.appendFormAsLayer(outPdfPage,formPdf4,afBottomRight,"bottomRight" + page++);
 
                 for(int i=0;i<formPDF.length;i++) {
                     if (formPDF[i]==null) break;
@@ -144,6 +152,7 @@ public class Controller {
                 outputFile.save(finalFile);
             }
 
+            outputFile.close();
             Alert alert = new Alert(Alert.AlertType.INFORMATION, "Files merged.", ButtonType.OK);
             alert.setHeaderText("ALL DONE");
             alert.show();
@@ -153,5 +162,22 @@ public class Controller {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @FXML
+    public void selectPath(ActionEvent actionEvent) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF files", "*.pdf"));
+
+        finalFile = fileChooser.showSaveDialog(null);
+        if(finalFile != null) {
+            destPath.setText(finalFile.getPath());
+        }
+    }
+
+    @FXML
+    public void clearList(ActionEvent actionEvent) {
+        ObservableList<Pdf> list = tableView.getItems();
+        list.clear();
     }
 }
